@@ -1,0 +1,289 @@
+<html>
+<head>
+  <style type="text/css">
+  </style>
+  <script type="text/javascript" src="./lib/fabric.js"></script>
+  <script type="text/javascript" src="./lib/jquery-3.min.js"></script>
+  <script type="text/javascript" src="./lib/filesaver.min.js"></script>
+</head>
+<body>
+      <canvas id="c" width="800" height="600"></canvas>
+ <input type="button" id="add_text" value="Add Text">
+ <input type="button" id="remove_elements" value="Delete Selected Element(s)">
+ <input type="button" id="image" value="Download Image">
+ <input type="button" id="filter" value="Apply Filter">
+ <select id="fontFamily">
+   <option value="">Select Font</option>
+   <option value="Comic Sans">Comic Sans</option>
+   <option value="Bebas Neue">Bebas Neue</option>
+   <option value="Hoefler Text">Hoefler Text</option>
+ </select>
+ <button id="zoomin">+</button>
+<button id="zoomout">-</button>
+<button id="serialize">Serialize</button>
+ <img id="design1" class="img ui-draggable" data-src="/images/0002.png" alt="0002.png" src="http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065877/0002_gtb0u5.svg" crossorigin="anonymous">
+</body>
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+ var canvas,
+            canvasOriginalWidth = 800,
+            canvasOriginalHeight = 600,
+            canvasWidth = 800,
+            canvasHeight = 600,
+            imgWidth,
+            imgHeight,
+            bgImage,
+            canvasScale = 1,
+            photoUrlPortrait = 'http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065786/iphone-5_yjpaox.png';
+
+
+  $(document).ready(function () {
+             canvas = window._canvas = new fabric.Canvas('c');
+             setCanvasZoom();
+
+             $('#zoomin').click(function () {
+                 canvasScale *= 1.25;
+                 scaleAndPositionImage();
+             });
+             $('#zoomout').click(function () {
+                 canvasScale /= 1.25;
+                 scaleAndPositionImage();
+             });
+
+
+             setCanvasSize({ height: canvasHeight, width: canvasWidth });
+
+             setTimeout(function () {
+                 setCanvasBackgroundImageUrl(photoUrlPortrait, 0, 0, 1)
+             }, 50)
+
+             $("input#image").click(function(){
+               console.log('image button clicked')
+               $("#c").get(0).toBlob(function(blob){
+                 saveAs(blob, "myImg.png")
+               })
+             })
+
+             canvas.on('mouse:down', function(options){
+                getMouse(options);// its not an event its options of your canvas object
+             });
+
+
+             function getMouse(options) {
+                 console.log(options);// you can check all options here
+                 console.log(options.e.clientX);
+             }
+
+             img1 = null
+
+             //https://dl.dropboxusercontent.com/s/op19iw4yu0m69cl/0002.svg?dl=0
+             $('#design1').on('click', function(e){
+               fabric.Image.fromURL('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065877/0002_gtb0u5.svg', function(oImg) {
+                 img1 = oImg
+                 canvas.add(oImg);
+               }, { crossOrigin: 'Anonymous' });
+             })
+
+             function addFilter(){
+               if(!img1){
+                 return
+               }
+
+               // add filter
+                img1.filters.push(new fabric.Image.filters.Sepia(), 
+                 new fabric.Image.filters.Brightness({ brightness: 100 }));
+
+                // apply filters and re-render canvas when done
+                img1.applyFilters();
+             }
+
+             $('#filter').on('click', function(e){
+               addFilter()
+             })
+
+             text1 = null
+
+             $('#add_text').on('click', function(e){
+               text1 = new fabric.IText('Tap and Type', { 
+                       left: 50,
+                       top: 100,
+                       fontFamily: 'arial black',
+                       fill: '#333',
+                       fontSize: 50
+                 })
+               canvas.add(text1);
+             })
+
+             $('#remove_elements').on('click', function(e){
+                if(canvas.getActiveGroup()){
+                      canvas.getActiveGroup().forEachObject(function(o){ canvas.remove(o) });
+                      canvas.discardActiveGroup().renderAll();
+                    } else {
+                      canvas.remove(canvas.getActiveObject());
+                    }
+             })
+
+             $('#fontFamily').change(function(){
+                var selectedFontFamily = $('#fontFamily option:selected').val()
+                if(selectedFontFamily){
+                  text1.set('fontFamily', selectedFontFamily)
+                } else {
+                  text1.set('fontFamily', "arial black")
+                }
+                canvas.renderAll();
+             })
+
+             $('#serialize').on('click', function(){
+              console.log(JSON.stringify(canvas))
+             })
+
+             canvas.on("object:added", function (e) {
+                 var object = e.target;
+                 console.log('object:added');
+             });
+
+             canvas.on("object:modified", function (e) {
+                 var object = e.target;
+                 console.log('object:modified');
+             });
+
+
+         });
+
+         function setCanvasSize(canvasSizeObject) {
+             canvas.setWidth(canvasSizeObject.width);
+             canvas.setHeight(canvasSizeObject.height);
+         }
+
+         function setCanvasZoom() {
+             canvasWidth = canvasOriginalWidth * canvasScale;
+             canvasHeight = canvasOriginalHeight * canvasScale;
+
+             canvas.setWidth(canvasWidth);
+             canvas.setHeight(canvasHeight);
+         }
+
+         function setCanvasBackgroundImageUrl(url) {
+             if (url && url.length > 0) {
+                 fabric.Image.fromURL(url, function (img) {
+                     bgImage = img;
+                     bgImage.crossOrigin = "anonymous";
+                     scaleAndPositionImage();
+                 }, { crossOrigin: 'Anonymous' });
+             } else {
+                 canvas.backgroundImage = 0;
+                 canvas.setBackgroundImage('', canvas.renderAll.bind(canvas));
+
+                 canvas.renderAll();
+             }
+         }
+
+         function scaleAndPositionImage() {
+             setCanvasZoom();
+
+             var canvasAspect = canvasWidth / canvasHeight;
+             var imgAspect = bgImage.width / bgImage.height;
+             var left, top, scaleFactor;
+
+             if (canvasAspect >= imgAspect) {
+                 var scaleFactor = canvasWidth / bgImage.width;
+                 left = 0;
+                 top = -((bgImage.height * scaleFactor) - canvasHeight) / 2;
+             } else {
+                 var scaleFactor = canvasHeight / bgImage.height;
+                 top = 0;
+                 left = -((bgImage.width * scaleFactor) - canvasWidth) / 2;
+
+             }
+
+             canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas), {
+                 top: top,
+                 left: left,
+                 originX: 'left',
+                 originY: 'top',
+                 scaleX: scaleFactor,
+                 scaleY: scaleFactor,
+             });
+             canvas.renderAll();
+
+         }
+
+window.onbeforeunload = function() {
+  return "Data will be lost if you leave the page, are you sure?";
+};
+
+
+
+  /*           
+  var canvas = new fabric.Canvas("c")
+  canvas.setBackgroundImage('https://presspack.rte.ie/wp-content/blogs.dir/2/files/2015/04/AMC_TWD_Maggie_Portraits_4817_V1.jpg')
+  // var rect = new fabric.Rect({
+  //   left: 100,
+  //   top: 100,
+  //   fill: 'red',
+  //   width: 200,
+  //   height: 200
+  // })
+  // canvas.add(rect)
+
+  
+
+  $("input#image").click(function(){
+    console.log('image button clicked')
+    $("#c").get(0).toBlob(function(blob){
+      saveAs(blob, "myImg.png")
+    })
+  })
+
+  canvas.on('mouse:down', function(options){
+     getMouse(options);// its not an event its options of your canvas object
+  });
+
+
+  function getMouse(options) {
+      console.log(options);// you can check all options here
+      console.log(options.e.clientX);
+  }
+
+  img1 = null
+
+  $('#design1').on('click', function(e){
+    fabric.Image.fromURL('https://dl.dropboxusercontent.com/s/op19iw4yu0m69cl/0002.svg?dl=0', function(oImg) {
+      img1 = oImg
+      canvas.add(oImg);
+    }, { crossOrigin: 'Anonymous' });
+  })
+
+  function addFilter(){
+    if(!img1){
+      return
+    }
+
+    // add filter
+     img1.filters.push(new fabric.Image.filters.Sepia(), 
+      new fabric.Image.filters.Brightness({ brightness: 100 }));
+
+     // apply filters and re-render canvas when done
+     img1.applyFilters();
+  }
+
+  $('#filter').on('click', function(e){
+    addFilter()
+  })
+
+  $('#add_text').on('click', function(e){
+    canvas.add(new fabric.IText('Tap and Type', { 
+            left: 50,
+            top: 100,
+            fontFamily: 'arial black',
+            fill: '#333',
+            fontSize: 50
+      }));
+  })
+  */
+</script>
+</html>
