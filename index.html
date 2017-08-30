@@ -21,6 +21,8 @@
  <button id="zoomin">+</button>
 <button id="zoomout">-</button>
 <button id="serialize">Serialize</button>
+<button id="undo">Undo</button>
+<button id="redo">Redo</button>
  <img id="design1" class="img ui-draggable" data-src="/images/0002.png" alt="0002.png" src="http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065877/0002_gtb0u5.svg" crossorigin="anonymous">
 </body>
 <script
@@ -40,6 +42,17 @@
             canvasScale = 1,
             photoUrlPortrait = 'http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065786/iphone-5_yjpaox.png';
 
+  var undoStack = [], redoStack = []     
+
+  var
+    canvasState             =  [],
+    currentStateIndex       = -1,
+    undoStatus              = false,
+    redoStatus              = false,
+    undoFinishedStatus      = 1,
+    redoFinishedStatus      = 1,
+    undoButton              = document.getElementById('undo'),
+    redoButton              = document.getElementById('redo');
 
   $(document).ready(function () {
              canvas = window._canvas = new fabric.Canvas('c');
@@ -142,17 +155,102 @@
              })
 
              canvas.on("object:added", function (e) {
-                 var object = e.target;
-                 console.log('object:added');
+                updateCanvasState()
              });
 
              canvas.on("object:modified", function (e) {
-                 var object = e.target;
-                 console.log('object:modified');
+                 updateCanvasState()
              });
 
+             $('#undo').on('click', function(){
+                undo()
+             })
+
+             $('#redo').on('click', function(){
+                redo()
+             })
 
          });
+
+        function updateCanvasState(){
+          if((undoStatus == false && redoStatus == false)){
+            var jsonData        = canvas.toJSON();
+            var canvasAsJson        = JSON.stringify(jsonData);
+            if(currentStateIndex < canvasState.length-1){
+              var indexToBeInserted                  = currentStateIndex+1;
+              canvasState[indexToBeInserted] = canvasAsJson;
+              var numberOfElementsToRetain           = indexToBeInserted+1;
+              canvasState                    = canvasState.splice(0,numberOfElementsToRetain);
+            }else{
+              canvasState.push(canvasAsJson);
+            }
+            currentStateIndex = canvasState.length-1;
+            if((currentStateIndex == canvasState.length-1) && currentStateIndex != -1){
+              redoButton.disabled= "disabled";
+            }
+          }
+        }
+
+         function undo(){
+          if(undoFinishedStatus){
+            if(currentStateIndex == -1){
+              undoStatus = false;
+            }
+            else{
+              if (canvasState.length >= 1) {
+                undoFinishedStatus = 0;
+                if(currentStateIndex != 0){
+                  undoStatus = true;
+                  canvas.loadFromJSON(canvasState[currentStateIndex-1],function(){
+                      var jsonData = JSON.parse(canvasState[currentStateIndex-1]);
+                      canvas.renderAll();
+                      undoStatus = false;
+                      currentStateIndex -= 1;
+                      undoButton.removeAttribute("disabled");
+                      if(currentStateIndex !== canvasState.length-1){
+                        redoButton.removeAttribute('disabled');
+                      }
+                    undoFinishedStatus = 1;
+                  });
+                }
+                else if(currentStateIndex == 0){
+                  canvas.clear();
+                  setCanvasBackgroundImageUrl(photoUrlPortrait, 0, 0, 1)
+                  undoFinishedStatus = 1;
+                  undoButton.disabled= "disabled";
+                  redoButton.removeAttribute('disabled');
+                  currentStateIndex -= 1;
+                }
+              }
+            }
+          }
+         }
+
+         function redo(){
+          if(redoFinishedStatus){
+            if((currentStateIndex == canvasState.length-1) && currentStateIndex != -1){
+              redoButton.disabled= "disabled";
+            }else{
+              if (canvasState.length > currentStateIndex && canvasState.length != 0){
+                redoFinishedStatus = 0;
+                redoStatus = true;
+                canvas.loadFromJSON(canvasState[currentStateIndex+1],function(){
+                    var jsonData = JSON.parse(canvasState[currentStateIndex+1]);
+                    canvas.renderAll();
+                    redoStatus = false;
+                    currentStateIndex += 1;
+                    if(currentStateIndex != -1){
+                      undoButton.removeAttribute('disabled');
+                    }
+                  redoFinishedStatus = 1;
+                  if((currentStateIndex == canvasState.length-1) && currentStateIndex != -1){
+                    redoButton.disabled= "disabled";
+                  }
+                });
+              }
+            }
+          }
+         }
 
          function setCanvasSize(canvasSizeObject) {
              canvas.setWidth(canvasSizeObject.width);
@@ -215,75 +313,5 @@
 window.onbeforeunload = function() {
   return "Data will be lost if you leave the page, are you sure?";
 };
-
-
-
-  /*           
-  var canvas = new fabric.Canvas("c")
-  canvas.setBackgroundImage('https://presspack.rte.ie/wp-content/blogs.dir/2/files/2015/04/AMC_TWD_Maggie_Portraits_4817_V1.jpg')
-  // var rect = new fabric.Rect({
-  //   left: 100,
-  //   top: 100,
-  //   fill: 'red',
-  //   width: 200,
-  //   height: 200
-  // })
-  // canvas.add(rect)
-
-  
-
-  $("input#image").click(function(){
-    console.log('image button clicked')
-    $("#c").get(0).toBlob(function(blob){
-      saveAs(blob, "myImg.png")
-    })
-  })
-
-  canvas.on('mouse:down', function(options){
-     getMouse(options);// its not an event its options of your canvas object
-  });
-
-
-  function getMouse(options) {
-      console.log(options);// you can check all options here
-      console.log(options.e.clientX);
-  }
-
-  img1 = null
-
-  $('#design1').on('click', function(e){
-    fabric.Image.fromURL('https://dl.dropboxusercontent.com/s/op19iw4yu0m69cl/0002.svg?dl=0', function(oImg) {
-      img1 = oImg
-      canvas.add(oImg);
-    }, { crossOrigin: 'Anonymous' });
-  })
-
-  function addFilter(){
-    if(!img1){
-      return
-    }
-
-    // add filter
-     img1.filters.push(new fabric.Image.filters.Sepia(), 
-      new fabric.Image.filters.Brightness({ brightness: 100 }));
-
-     // apply filters and re-render canvas when done
-     img1.applyFilters();
-  }
-
-  $('#filter').on('click', function(e){
-    addFilter()
-  })
-
-  $('#add_text').on('click', function(e){
-    canvas.add(new fabric.IText('Tap and Type', { 
-            left: 50,
-            top: 100,
-            fontFamily: 'arial black',
-            fill: '#333',
-            fontSize: 50
-      }));
-  })
-  */
 </script>
 </html>
