@@ -7,6 +7,7 @@
   <script type="text/javascript" src="../lib/jquery-3.min.js"></script>
   <script type="text/javascript" src="../lib/filesaver.min.js"></script>
   <script type="text/javascript" src="../lib/templates.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
 </head>
 <body>
       <canvas id="c" width="300" height="500"></canvas>
@@ -19,8 +20,9 @@
 <script type="text/javascript">
 (function() {
 
-  var img02URL = 'http://fabricjs.com/lib/pug.jpg';
-  var canvas = this.__canvas = new fabric.Canvas('c');
+ var pugUrl = "http://res.cloudinary.com/dwo2xbukk/image/upload/v1504609823/pug-portrait-pepper-glance_hcs7r5.jpg";
+ var bulldogUrl = "http://res.cloudinary.com/dwo2xbukk/image/upload/v1504598317/bulldog_ah2law.jpg"
+ var canvas = this.__canvas = new fabric.Canvas('c');
   // canvas.setBackgroundImage('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065786/iphone-5_yjpaox.png', canvas.renderAll.bind(canvas))
   fabric.Object.prototype.transparentCorners = false;
   var rects = []
@@ -43,6 +45,46 @@
   })
 
   canvas.add(drawingCanvas)
+
+  function findByClipName(name) {
+        return _.filter(canvas.getObjects(), function(item) {
+          return item.clipFor === name
+        })[0]
+    }
+
+    function degToRad(degrees) {
+        return degrees * (Math.PI / 180);
+    }
+
+    var clipByName = function (ctx) {
+        var clipRect = findByClipName(this.clipName);
+        var scaleXTo1 = (1 / this.scaleX);
+        var scaleYTo1 = (1 / this.scaleY);
+        ctx.save();
+        ctx.translate(0,0);
+        
+        //logic for correct scaling
+        if (this.getFlipY() && !this.getFlipX()){
+          ctx.scale(scaleXTo1, -scaleYTo1);
+        } else if (this.getFlipX() && !this.getFlipY()){
+          ctx.scale(-scaleXTo1, scaleYTo1);
+        } else if (this.getFlipX() && this.getFlipY()){
+          ctx.scale(-scaleXTo1, -scaleYTo1);
+        } else {
+          ctx.scale(scaleXTo1, scaleYTo1);
+        }
+        //IMPORTANT!!! do rotation after scaling
+        ctx.rotate(degToRad(this.angle * -1));
+        ctx.beginPath();
+        ctx.rect(
+            clipRect.left - this.left,
+            clipRect.top - this.top,
+            clipRect.width,
+            clipRect.height
+        );
+        ctx.closePath();
+        ctx.restore();
+    }
 
   var drawingRectCanvas = new fabric.Rect({
     originX: 'left',
@@ -103,7 +145,8 @@
     return element.name == 'simple_2_rect_grid'
   })
   var polygons = template.polygons
-  for(var i=0; i< polygons.length-1; i++){
+  var rects = []
+  for(var i=0; i< polygons.length; i++){
     var polygon = polygons[i]
     var rect = new fabric.Rect({
         originX: 'left',
@@ -118,80 +161,79 @@
         lockScalingY: true,
         lockMovementX: true,
         lockMovementY: true,
-        clipFor: 'pug'
       })
 
     rects.push(rect)
     canvas.add(rect)
 
-    function clipByName(ctx){
-              console.warn('hi')
-              var scaleXTo1 = (1 / this.scaleX);
-              var scaleYTo1 = (1 / this.scaleY);
-              ctx.save();
-              ctx.translate(-this.width/2,-this.height/2);
-              //ctx.translate(0,0)
-              if (this.getFlipY() && !this.getFlipX()){
-                ctx.scale(scaleXTo1, -scaleYTo1);
-              } else if (this.getFlipX() && !this.getFlipY()){
-                ctx.scale(-scaleXTo1, scaleYTo1);
-              } else if (this.getFlipX() && this.getFlipY()){
-                ctx.scale(-scaleXTo1, -scaleYTo1);
-              } else {
-                ctx.scale(scaleXTo1, scaleYTo1);
-              }
-              ctx.rotate((this.angle * -1) * (Math.PI / 180));
-              ctx.beginPath()
-              ctx.fillStyle='cyan'
-              ctx.rect(
-                 
-                            0, 0,
-                          rects[0].width,
-                          rects[0].height
-                      );
-              ctx.closePath()
-              ctx.restore()
-             }
-
-       var pugImg = new Image();
-       pugImg.onload = function (img) { 
-      var pug = new fabric.Image(pugImg, {
-         top: 150 ,
-         left: 100,
-         scaleX: 0.25,
-         scaleY: 0.25,
-         clipName: 'pug',
-         clipTo: function(ctx){
-          return clipByName.bind(pug)(ctx)
-         }
-        });
-        // img1 = oImg
-        // canvas.add(oImg);
-        // canvas.renderAll();
-
-        // var points = []
-        // points.push({x: rects[0].left+rects[0].width, y: rects[0].top})
-        // points.push({x: oImg.left+oImg.width, y: oImg.top})
-        // points.push({x: oImg.left+oImg.width, y: oImg.top + oImg.height})
-        // points.push({x: oImg.left, y: oImg.top + oImg.height})
-        // points.push({x: oImg.left, y: rects[0].top + rects[0].height})
-        // points.push({x: rects[0].left+rects[0].width, y: rects[0].top + rects[0].height})
-
-        // var polygon = new fabric.Polygon(points, {
-        //   top: rects[0].top,
-        //   left: rects[0].left,
-        //   selectable: true,
-
-        // })
-
-        //canvas.add(polygon)
-
-        canvas.add(pug);
-      }
-      pugImg.src = img02URL
-      //'http://res.cloudinary.com/dwo2xbukk/image/upload/v1504505680/pug_tfhm3g.jpg';
-
   }
+
+  var maskRect = rects[0]
+    maskRect.set({
+      clipFor: 'pug'
+    });
+
+  var maskRect2 = rects[1]
+    maskRect2.set({
+      clipFor: 'bulldog'
+    })
+
+  function calculateScale(destWidth, destHeight, sourceWidth, sourceHeight){
+    var scale = 1
+    var th, tw
+    if(destWidth < destHeight) {
+      //destination is portrait
+      th = destHeight
+      tw = (sourceWidth * destHeight) / sourceHeight
+      scale = tw / sourceWidth
+    } else {
+      //destination is landscape
+      th = (sourceHeight * destWidth) / sourceWidth
+      tw = destWidth
+      scale =  th / sourceHeight
+    }
+    return scale
+  }
+    
+    var pugImage = new Image()
+      pugImage.onload = function (img) {    
+        var pug = new fabric.Image(pugImage, {
+            left: maskRect.left + maskRect.width / 2,
+            top: maskRect.top + maskRect.height / 2,
+            scaleX: calculateScale(maskRect.width, maskRect.height, pugImage.width, pugImage.height),
+            scaleY: calculateScale(maskRect.width, maskRect.height, pugImage.width, pugImage.height),
+            originX: 'center',
+            originY: 'center',
+            clipName: 'pug',
+            centeredScaling: true,
+            lockUniScaling: true,
+            clipTo: function(ctx) { 
+                return _.bind(clipByName, pug)(ctx) 
+            }        
+        });
+        canvas.add(pug);
+      };
+      pugImage.src = pugUrl;
+
+      var bulldogImage = new Image()
+      bulldogImage.onload = function (img) {    
+        var bulldog = new fabric.Image(bulldogImage, {
+            left: maskRect2.left + maskRect2.width / 2,
+            top: maskRect2.top + maskRect2.height / 2,
+           scaleX: calculateScale(maskRect2.width, maskRect2.height, bulldogImage.width, bulldogImage.height),
+           scaleY: calculateScale(maskRect2.width, maskRect2.height, bulldogImage.width, bulldogImage.height),
+            originX: 'center',
+            originY: 'center',
+            clipName: 'bulldog',
+            centeredScaling: true,
+            lockUniScaling: true,
+            clipTo: function(ctx) { 
+                return _.bind(clipByName, bulldog)(ctx) 
+            }        
+        });
+        canvas.add(bulldog);
+      };
+      bulldogImage.src = bulldogUrl;
 
   function insetRect(rect, insetDistance) {
     var newWidth = rect.width - 2*insetDistance;

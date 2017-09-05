@@ -1,6 +1,9 @@
 <html>
 <head>
   <style type="text/css">
+   #c{
+    border: 1px solid;
+   }
   </style>
   <script type="text/javascript" src="../lib/fabric.js"></script>
   <script type="text/javascript" src="../lib/jquery-3.min.js"></script>
@@ -96,7 +99,7 @@
 
   var templates = logicalSpace.templates
   var template = templates.find(function(element){
-    return element.name == '4_parallel_rects'
+    return element.name == 'simple_8_rect_grid'
   })
   var polygons = template.polygons
   for(var i=0; i< polygons.length; i++){
@@ -106,8 +109,8 @@
         originY: 'top',
         left: polygon.left*scale + tx,
         top: polygon.top*scale + ty,
-        width: polygon.width * scale,
-        height: polygon.height * scale ,
+        width: (polygon.width) * scale,
+        height: (polygon.height)* scale ,
         fill: polygon.color,
         selectable: true,
         lockScalingX: true,
