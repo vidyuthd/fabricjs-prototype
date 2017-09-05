@@ -58,6 +58,21 @@
              canvas = window._canvas = new fabric.Canvas('c');
              setCanvasZoom();
 
+             var rect1 = new fabric.Rect({
+                 originX: 'left',
+                 originY: 'top',
+                 left: 10,
+                 top: 25,
+                 width: 280,
+                 height: 225,
+                 fill: 'transparent',
+                 stroke: 'black',
+                 strokeWidth: 2,
+                 selectable: true,
+             });
+
+             canvas.add(rect1)
+
              $('#zoomin').click(function () {
                  canvasScale *= 1.25;
                  scaleAndPositionImage();
@@ -94,8 +109,19 @@
              img1 = null
 
              //https://dl.dropboxusercontent.com/s/op19iw4yu0m69cl/0002.svg?dl=0
+             // http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065877/0002_gtb0u5.svg
              $('#design1').on('click', function(e){
-               fabric.Image.fromURL('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065877/0002_gtb0u5.svg', function(oImg) {
+               fabric.Image.fromURL('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504505680/pug_tfhm3g.jpg', function(oImg) {
+                 oImg.set({
+                  top: rect1.top,
+                  left: rect1.left,
+                  // width: rect1.width,
+                  // height: rect1.height,
+                  // transformMatrix: [(rect1.width/oImg.width),0,0,(rect1.height/oImg.height),0,0]
+                  // clipTo: function(ctx){
+                  //   ctx.rect(-(oImg.width/2),-(oImg.height/2), rect1.width, rect1.height)
+                  // }
+                 })
                  img1 = oImg
                  canvas.add(oImg);
                }, { crossOrigin: 'Anonymous' });

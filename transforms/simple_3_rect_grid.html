@@ -1,0 +1,146 @@
+<html>
+<head>
+  <style type="text/css">
+  </style>
+  <script type="text/javascript" src="../lib/fabric.js"></script>
+  <script type="text/javascript" src="../lib/jquery-3.min.js"></script>
+  <script type="text/javascript" src="../lib/filesaver.min.js"></script>
+  <script type="text/javascript" src="../lib/templates.js"></script>
+</head>
+<body>
+      <canvas id="c" width="300" height="500"></canvas>
+</body>
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+<script type="text/javascript">
+(function() {
+
+  var canvas = this.__canvas = new fabric.Canvas('c');
+  // canvas.setBackgroundImage('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065786/iphone-5_yjpaox.png', canvas.renderAll.bind(canvas))
+  fabric.Object.prototype.transparentCorners = false;
+
+  var drawingRect = insetRect({left: 0, top: 0, width: canvas.width, height: canvas.height}, 20)
+  
+  var drawingCanvas = new fabric.Rect({
+    originX: 'left',
+    originY: 'top',
+    left: 0,
+    top: 0,
+    width: canvas.width,
+    height: canvas.height,
+    fill: 'red',
+    selectable: true,
+    lockScalingX: true,
+    lockScalingY: true,
+    lockMovementX: true,
+    lockMovementY: true
+  })
+
+  canvas.add(drawingCanvas)
+
+  var drawingRectCanvas = new fabric.Rect({
+    originX: 'left',
+    originY: 'top',
+    left: drawingRect.left,
+    top: drawingRect.top,
+    width: drawingRect.width,
+    height: drawingRect.height,
+    fill: 'blue',
+    selectable: true,
+    lockScalingX: true,
+    lockScalingY: true,
+    lockMovementX: true,
+    lockMovementY: true
+  })
+
+  canvas.add(drawingRectCanvas)
+
+  var transformedLogicalPolygonCanvasHeight;
+  var transformedLogicalPolygonCanvasWidth;
+
+  var scale=1
+
+  if(drawingRect.width > drawingRect.height) {
+    transformedLogicalPolygonCanvasHeight = drawingRect.height
+    transformedLogicalPolygonCanvasWidth = (logicalSpace.canvasWidth * drawingRect.height) / logicalSpace.canvasHeight
+    scale = transformedLogicalPolygonCanvasWidth / logicalSpace.canvasWidth
+  } else {
+    transformedLogicalPolygonCanvasHeight = (logicalSpace.canvasHeight * drawingRect.width) / logicalSpace.canvasWidth
+    transformedLogicalPolygonCanvasWidth = drawingRect.width
+    scale =  transformedLogicalPolygonCanvasHeight / logicalSpace.canvasHeight
+  }
+  
+  var polygonCanvasRect = centerInsideRect(drawingRect, transformedLogicalPolygonCanvasWidth, transformedLogicalPolygonCanvasHeight)
+
+  var polygonCanvas = new fabric.Rect({
+    originX: 'left',
+    originY: 'top',
+    left: polygonCanvasRect.left,
+    top: polygonCanvasRect.top,
+    width: polygonCanvasRect.width,
+    height: polygonCanvasRect.height,
+    fill: 'yellow',
+    selectable: true,
+    lockScalingX: true,
+    lockScalingY: true,
+    lockMovementX: true,
+    lockMovementY: true
+  })
+
+  canvas.add(polygonCanvas)
+
+  var tx = polygonCanvasRect.left
+  var ty = polygonCanvasRect.top
+
+  var templates = logicalSpace.templates
+  var template = templates.find(function(element){
+    return element.name == '4_parallel_rects'
+  })
+  var polygons = template.polygons
+  for(var i=0; i< polygons.length; i++){
+    var polygon = polygons[i]
+    rect = new fabric.Rect({
+        originX: 'left',
+        originY: 'top',
+        left: polygon.left*scale + tx,
+        top: polygon.top*scale + ty,
+        width: polygon.width * scale,
+        height: polygon.height * scale ,
+        fill: polygon.color,
+        selectable: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockMovementX: true,
+        lockMovementY: true
+      })
+
+    canvas.add(rect)
+  }
+
+  function insetRect(rect, insetDistance) {
+    var newWidth = rect.width - 2*insetDistance;
+    var newHeight = rect.height - 2*insetDistance;
+    var newLeft = rect.left + insetDistance;
+    var newTop = rect.top + insetDistance;
+    return {left: newLeft, top: newTop, width: newWidth, height: newHeight}
+  }
+
+  //assumes that source rect is greater than destination
+  function centerInsideRect(sourceRect, destinationWidth, destinationHeight) {
+    var center = rectCenter(sourceRect)
+    var newLeft = center.x - destinationWidth / 2;
+    var newTop = center.y - destinationHeight / 2;
+    return {left: newLeft, top: newTop, width: destinationWidth, height: destinationHeight}
+  }
+
+  function rectCenter(rect) {
+    return {
+      x: rect.left + (rect.width / 2),
+      y: rect.top + (rect.height / 2),
+    }
+  }
+ 
+})();
+</script>
