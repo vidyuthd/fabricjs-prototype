@@ -13,11 +13,6 @@
 </head>
 <body>
       <canvas id="c" width="300" height="600"></canvas>
-      <form id="form1">
-
-          <input type="file" id="selectFile" name="selectFile"/>
-
-      </form>
 </body>
 <script
   src="https://code.jquery.com/jquery-3.2.1.min.js"
@@ -25,7 +20,6 @@
   crossorigin="anonymous"></script>
 <script type="text/javascript">
 (function() {
-
   var pugUrl = "http://res.cloudinary.com/dwo2xbukk/image/upload/v1504609823/pug-portrait-pepper-glance_hcs7r5.jpg";
   var bulldogUrl = "http://res.cloudinary.com/dwo2xbukk/image/upload/v1504598317/bulldog_ah2law.jpg"
   var canvas = this.__canvas = new fabric.Canvas('c');
@@ -41,7 +35,7 @@
     top: 0,
     width: canvas.width,
     height: canvas.height,
-    fill: 'transparent',
+    fill: 'red',
     selectable: true,
     lockScalingX: true,
     lockScalingY: true,
@@ -98,7 +92,7 @@
     top: drawingRect.top,
     width: drawingRect.width,
     height: drawingRect.height,
-    fill: 'transparent',
+    fill: 'blue',
     selectable: true,
     lockScalingX: true,
     lockScalingY: true,
@@ -132,7 +126,7 @@
     top: polygonCanvasRect.top,
     width: polygonCanvasRect.width,
     height: polygonCanvasRect.height,
-    fill: 'transparent',
+    fill: 'yellow',
     selectable: true,
     lockScalingX: true,
     lockScalingY: true,
@@ -161,30 +155,27 @@
         top: polygon.top*scale + ty,
         width: (polygon.width) * scale,
         height: (polygon.height)* scale ,
-        fill: 'transparent',
-        stroke: 2,
+        fill: polygon.color,
         selectable: true,
         lockScalingX: true,
         lockScalingY: true,
         lockMovementX: true,
-        lockMovementY: true,
-        clipFor: i
+        lockMovementY: true
       })
-   
+
     rects.push(rect)
     canvas.add(rect)
-
-    rect.on('mousedown', function(e){
-      document.getElementById('selectFile').click()
-    })
   }
 
   var maskRect = rects[0]
+    maskRect.set({
+      clipFor: 'pug'
+    });
 
   var maskRect2 = rects[1]
-    // maskRect2.set({
-    //   clipFor: 'bulldog'
-    // })
+    maskRect2.set({
+      clipFor: 'bulldog'
+    })
 
   function calculateScale(destWidth, destHeight, sourceWidth, sourceHeight){
     var scale = 1
@@ -212,125 +203,46 @@
     }
     return scale
   }
-
-
-  var myAppModule = (function () {
-      var outObj = {};
-
-      var file, fileReader, img;
-      var cCanvas, cImg;
-
-      var init = function (newFile, newFileReader) {
-          file = newFile;
-          fileReader = newFileReader;
-      };
-
-      var onloadImage = function () {
-          var image = new fabric.Image(img, {
-              left: rects[canvas.getActiveObject().get('clipFor')].left + rects[canvas.getActiveObject().get('clipFor')].width / 2,
-              top: rects[canvas.getActiveObject().get('clipFor')].top + rects[canvas.getActiveObject().get('clipFor')].height / 2,
-              scaleX: calculateScale(rects[canvas.getActiveObject().get('clipFor')].width, rects[canvas.getActiveObject().get('clipFor')].height, img.width, img.height),
-              scaleY: calculateScale(rects[canvas.getActiveObject().get('clipFor')].width, rects[canvas.getActiveObject().get('clipFor')].height, img.width, img.height),
-              originX: 'center',
-              originY: 'center',
-              clipName: canvas.getActiveObject().get('clipFor') ,
-              centeredScaling: true,
-              lockUniScaling: true,
-              clipTo: function(ctx) { 
-                  return _.bind(clipByName, image)(ctx) 
-              }        
-          });
-
-          canvas.add(image);
-      };
-
-      var onloadFile = function (e) {
-          img = new Image();
-          img.onload = onloadImage;
-          img.src = fileReader.result;
-      };
-
-      outObj.init = init;
-      outObj.OnloadFile = onloadFile;
-
-      return outObj;
-  })();
-
-  function handleFileSelect(evt) {
-      var files = evt.target.files;
-      var output = [];
-      for (var i = 0, f; f = files[i]; i++) {
-
-          if (!f.type.match('image.*')) {
-              continue;
-          }
-
-          var reader = new FileReader();
-
-          myAppModule.init(f, reader);
-
-          reader.onload = myAppModule.OnloadFile;
-
-          reader.readAsDataURL(f);
-
-      }
-  }
-
-  // var i = 0
-
-  // canvas.on('mouse:down', function(e){
-  //   //this.getActiveObject().set('fill', 'green')
-  //     i++
-  //     if(i > 1) {
-  //       return
-  //     }
-  //     document.getElementById('selectFile').click()
     
+    var pugImage = new Image()
+      pugImage.onload = function (img) {    
+        var pug = new fabric.Image(pugImage, {
+            left: maskRect.left + maskRect.width / 2,
+            top: maskRect.top + maskRect.height / 2,
+            scaleX: calculateScale(maskRect.width, maskRect.height, pugImage.width, pugImage.height),
+            scaleY: calculateScale(maskRect.width, maskRect.height, pugImage.width, pugImage.height),
+            originX: 'center',
+            originY: 'center',
+            clipName: 'pug',
+            centeredScaling: true,
+            lockUniScaling: true,
+            clipTo: function(ctx) { 
+                return _.bind(clipByName, pug)(ctx) 
+            }        
+        });
+        canvas.add(pug);
+      };
+      pugImage.src = pugUrl;
 
-  // })
-
-  document.getElementById('selectFile').addEventListener('change', handleFileSelect, false);
-
-    
-    // var pugImage = new Image()
-    //   pugImage.onload = function (img) {    
-    //     var pug = new fabric.Image(pugImage, {
-    //         left: maskRect.left + maskRect.width / 2,
-    //         top: maskRect.top + maskRect.height / 2,
-    //         scaleX: calculateScale(maskRect.width, maskRect.height, pugImage.width, pugImage.height),
-    //         scaleY: calculateScale(maskRect.width, maskRect.height, pugImage.width, pugImage.height),
-    //         originX: 'center',
-    //         originY: 'center',
-    //         clipName: 0,
-    //         centeredScaling: true,
-    //         lockUniScaling: true,
-    //         clipTo: function(ctx) { 
-    //             return _.bind(clipByName, pug)(ctx) 
-    //         }        
-    //     });
-    //     canvas.add(pug);
-    //   };
-    //   pugImage.src = pugUrl;
-
-    //   var bulldogImage = new Image()
-    //   bulldogImage.onload = function (img) {    
-    //     var bulldog = new fabric.Image(bulldogImage, {
-    //         left: maskRect2.left + maskRect2.width / 2,
-    //         top: maskRect2.top + maskRect2.height / 2,
-    //        scaleX: calculateScale(maskRect2.width, maskRect2.height, bulldogImage.width, bulldogImage.height),
-    //        scaleY: calculateScale(maskRect2.width, maskRect2.height, bulldogImage.width, bulldogImage.height),
-    //         originX: 'center',
-    //         originY: 'center',
-    //         clipName: 'bulldog',
-    //         centeredScaling: true,
-    //         lockUniScaling: true,
-    //         clipTo: function(ctx) { 
-    //             return _.bind(clipByName, bulldog)(ctx) 
-    //         }        
-    //     });
-    //     canvas.add(bulldog);
-    //   };
-    //   bulldogImage.src = bulldogUrl;
+      var bulldogImage = new Image()
+      bulldogImage.onload = function (img) {    
+        var bulldog = new fabric.Image(bulldogImage, {
+            left: maskRect2.left + maskRect2.width / 2,
+            top: maskRect2.top + maskRect2.height / 2,
+           scaleX: calculateScale(maskRect2.width, maskRect2.height, bulldogImage.width, bulldogImage.height),
+           scaleY: calculateScale(maskRect2.width, maskRect2.height, bulldogImage.width, bulldogImage.height),
+            originX: 'center',
+            originY: 'center',
+            clipName: 'bulldog',
+            centeredScaling: true,
+            lockUniScaling: true,
+            clipTo: function(ctx) { 
+                return _.bind(clipByName, bulldog)(ctx) 
+            }        
+        });
+        canvas.add(bulldog);
+      };
+      bulldogImage.src = bulldogUrl;
 
   function insetRect(rect, insetDistance) {
     var newWidth = rect.width - 2*insetDistance;
