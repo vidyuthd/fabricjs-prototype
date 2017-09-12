@@ -1,0 +1,65 @@
+<html>
+<head>
+  <style type="text/css">
+  </style>
+  <script type="text/javascript" src="./lib/fabric.js"></script>
+  <script type="text/javascript" src="./lib/jquery-3.min.js"></script>
+  <script type="text/javascript" src="./lib/filesaver.min.js"></script>
+</head>
+<body>
+      <canvas id="c" width="800" height="600"></canvas>
+</body>
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+<script type="text/javascript">
+(function() {
+  var canvas = this.__canvas = new fabric.Canvas('c');
+  canvas.setBackgroundImage('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065786/iphone-5_yjpaox.png', canvas.renderAll.bind(canvas))
+  fabric.Object.prototype.transparentCorners = false;
+
+  var radius = 300;
+
+
+  canvas.on('mouse:down', function(options){
+     getMouse(options);// its not an event its options of your canvas object
+  });
+
+
+  function getMouse(options) {
+      console.log(options);// you can check all options here
+      console.log(options.e.clientX);
+  }
+
+  var clipRect = new fabric.Rect({
+      originX: 'left',
+      originY: 'top',
+      left: 210,
+      top: 75,
+      width: 50,
+      height: 50,
+      fill: 'transparent',
+      stroke: 'black',
+      strokeWidth: 2,
+      selectable: false
+  });
+  clipRect.set({
+    clipFor: 'img'
+  })
+  canvas.add(clipRect)
+
+
+  fabric.Image.fromURL('./images/pug.jpg', function(img) {
+    img.scale(0.5).set({
+      left: 210,
+      top: 75,
+      clipName: 'img',
+      // clipTo: function (ctx) {
+       
+      // }
+    });
+    canvas.add(img).setActiveObject(img);
+  });
+})();
+</script>

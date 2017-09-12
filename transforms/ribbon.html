@@ -28,11 +28,10 @@
 
   var pugUrl = "http://res.cloudinary.com/dwo2xbukk/image/upload/v1504609823/pug-portrait-pepper-glance_hcs7r5.jpg";
   var bulldogUrl = "http://res.cloudinary.com/dwo2xbukk/image/upload/v1504598317/bulldog_ah2law.jpg"
-  var canvas = this.__canvas = new fabric.Canvas('c', {preserveObjectStacking: true});
+  var canvas = this.__canvas = new fabric.Canvas('c', {
+    preserveObjectStacking: true
+  });
   // canvas.setBackgroundImage('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065786/iphone-5_yjpaox.png', canvas.renderAll.bind(canvas))
-  var outlineImg, phoneMask;
-
-
   fabric.Object.prototype.transparentCorners = false;
 
   var drawingRect = insetRect({left: 0, top: 0, width: canvas.width, height: canvas.height}, 0)
@@ -45,7 +44,7 @@
     width: canvas.width,
     height: canvas.height,
     fill: 'transparent',
-    selectable: true,
+    selectable: false,
     lockScalingX: true,
     lockScalingY: true,
     lockMovementX: true,
@@ -102,7 +101,7 @@
     width: drawingRect.width,
     height: drawingRect.height,
     fill: 'transparent',
-    selectable: true,
+    selectable: false,
     lockScalingX: true,
     lockScalingY: true,
     lockMovementX: true,
@@ -136,7 +135,7 @@
     width: polygonCanvasRect.width,
     height: polygonCanvasRect.height,
     fill: 'transparent',
-    selectable: true,
+    selectable: false,
     lockScalingX: true,
     lockScalingY: true,
     lockMovementX: true,
@@ -150,7 +149,7 @@
 
   var templates = logicalSpace.templates
   var template = templates.find(function(element){
-    return element.name == 'generated_1_grid'
+    return element.name == 'simple_1_rect_grid_with_ribbon'
   })
   var polygons = template.polygons
   var rects = []
@@ -165,7 +164,6 @@
         width: (polygon.width) * scale,
         height: (polygon.height)* scale ,
         fill: 'transparent',
-        stroke: 2,
         selectable: true,
         lockScalingX: true,
         lockScalingY: true,
@@ -182,79 +180,94 @@
     // })
   }
 
-  var images = template.images
-  var phoneOutlineImgObj = images.find(function(element){
-    return element.textID === 'phoneOutline'
-  })
+  // var ribbon = new Image()
+  // ribbon.src = "http://res.cloudinary.com/dwo2xbukk/image/upload/v1504693584/ribbon_j58uvb.png"
+  // var ribbonImg = new fabric.Image(ribbon, {
+  //   top: 100,
+  //   left: 100
+  // })
 
-  var phoneMaskImgObj = images.find(function(element){
-    return element.textID === 'phoneMask'
-  })
+  var img = null
+ fabric.Image.fromURL( template.ribbon.url, function(oImg) {
+        oImg.set({
+         top: template.ribbon.top*scale,
+         left: template.ribbon.left*scale,
+         height: template.ribbon.height*scale,
+         width: template.ribbon.width*scale
+        })
+        img = oImg
 
-  fabric.Image.fromURL(phoneOutlineImgObj.src, function(oImg){
-               oImg.set({
-                 name: 'phoneOutline',
-                 selectable: false,
-                 lockScalingX: true,
-                 lockScalingY: true,
-                 lockMovementX: true,
-                 lockMovementY: true,
-               })
-               canvas.add(oImg)
-               outlineImg = oImg
+        
+        // Double-click event handler
+        var fabricDblClick = function (obj, handler) {
+            return function () {
+                if (obj.clicked) handler(obj);
+                else {
+                    obj.clicked = true;
+                    setTimeout(function () {
+                        obj.clicked = false;
+                    }, 500);
+                }
+            };
+        };
 
-               // set phone mask which includes camera and buttons
-               // fabric.Image.fromURL(phoneMaskImgObj.src, function(oImg){
-                canvas.setOverlayImage(phoneMaskImgObj.src, canvas.renderAll.bind(canvas), {
-                                          left: outlineImg.left,
-                                          top: outlineImg.top ,
-                                          originX: 'left',
-                                          originY: 'top',
-                                          clipFor: 'phoneMask',
-                                          width: phoneMaskImgObj.width,
-                                          height: phoneMaskImgObj.height,
-                                          scaleX: phoneMaskImgObj.scaleX,
-                                          scaleY: phoneMaskImgObj.scaleY,
-                                          selectable: false,
-                                          lockScalingX: true,
-                                          lockScalingY: true,
-                                          lockMovementX: true,
-                                          lockMovementY: true,
-                                          name: 'phoneMask'
-                                      }
-                // phoneMask = oImg
-               // canvas.add(oImg)
-               // canvas.bringToFront(oImg)
-               )
-              })
+        // ungroup objects in group
+        var groupItems = []
+        var ungroup = function (group) {
+            groupItems = group._objects;
+            group._restoreObjectsState();
+            canvas.remove(group);
+            for (var i = 0; i < groupItems.length; i++) {
+                canvas.add(groupItems[i]);
+            }
+            // if you have disabled render on addition
+            canvas.renderAll();
+        };
 
-  var maskImgObj = images.find(function(element){
-    return element.textID === 'mask'
-  })
+        // Re-group when text editing finishes
+        var dimensionText = new fabric.IText("Tap and Type", {
+            fontFamily: 'Comic Sans',
+            fontSize: 14,
+            stroke: '#000',
+            strokeWidth: 1,
+            fill: "#000",
+            left: template.ribbonText.left*scale,
+            top: template.ribbonText.top*scale
+        });
+        dimensionText.on('editing:exited', function () {
+            var items = [];
+            groupItems.forEach(function (obj) {
+                if(obj){
+                  items.push(obj);
+                  canvas.remove(obj);
+                }
+            });
+            var grp = new fabric.Group(items.reverse());
+            canvas.add(grp);
+            grp.on('mousedown', fabricDblClick(grp, function (obj) {
+                ungroup(grp);
+                canvas.setActiveObject(dimensionText);
+                dimensionText.enterEditing();
+                dimensionText.selectAll();
+            }));
+        });
 
-  if(maskImgObj){
-    fabric.Image.fromURL(maskImgObj.src, function(oImg){
-     oImg.set({
-                               left: maskImgObj.left,
-                               top: maskImgObj.top ,
-                               originX: 'left',
-                               originY: 'top',
-                               clipFor: 'phoneMask',
-                               width: phoneMaskImgObj.width,
-                               height: maskImgObj.height,
-                               scaleX: maskImgObj.scaleX,
-                               scaleY: maskImgObj.scaleY,
-                               selectable: false,
-                               lockScalingX: true,
-                               lockScalingY: true,
-                               lockMovementX: true,
-                               lockMovementY: true,
-                               name: 'mask'
-                           })
-     canvas.add(oImg)
-     canvas.bringToFront(oImg)
-    })
-  }
+        function addRuler() {
+            var imageGroup = new fabric.Group([img, dimensionText]);
+            canvas.add(imageGroup);
+            imageGroup.on('mousedown', fabricDblClick(imageGroup, function (obj) {
+                ungroup(imageGroup);
+                canvas.setActiveObject(dimensionText);
+                dimensionText.enterEditing();
+                dimensionText.selectAll();
+            }));
+        }
+        addRuler();
+      }, { crossOrigin: 'Anonymous' });
+
+
+
+
 
   var maskRect = rects[0]
 
@@ -304,13 +317,13 @@
 
       var onloadImage = function () {
           var image = new fabric.Image(img, {
-              left: rects[canvas.getActiveObject().get('clipFor')].left + rects[canvas.getActiveObject().get('clipFor')].width / 2,
-              top: rects[canvas.getActiveObject().get('clipFor')].top + rects[canvas.getActiveObject().get('clipFor')].height / 2,
-              scaleX: calculateScale(rects[canvas.getActiveObject().get('clipFor')].width, rects[canvas.getActiveObject().get('clipFor')].height, img.width, img.height),
-              scaleY: calculateScale(rects[canvas.getActiveObject().get('clipFor')].width, rects[canvas.getActiveObject().get('clipFor')].height, img.width, img.height),
+              left: rects[0].left + rects[0].width / 2,
+              top: rects[0].top + rects[0].height / 2,
+              scaleX: calculateScale(rects[0].width, rects[0].height, img.width, img.height),
+              scaleY: calculateScale(rects[0].width, rects[0].height, img.width, img.height),
               originX: 'center',
               originY: 'center',
-              clipName: canvas.getActiveObject().get('clipFor') ,
+              clipName: 0 ,
               centeredScaling: true,
               lockUniScaling: true,
               clipTo: function(ctx) { 
@@ -318,10 +331,8 @@
               }        
           });
 
-          // canvas.remove(phoneMask)
-          // canvas.add(image);
-          // canvas.add(phoneMask)
-          canvas.add(image)
+          canvas.add(image);
+          canvas.sendBackwards(image)
       };
 
       var onloadFile = function (e) {
@@ -369,7 +380,7 @@
 
   // })
 
-  document.getElementById('selectFile').addEventListener('change', handleFileSelect, false);
+   document.getElementById('selectFile').addEventListener('change', handleFileSelect, false);
 
     
     // var pugImage = new Image()

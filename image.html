@@ -1,0 +1,98 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+<title></title>
+<script type="text/javascript" src="./lib/fabric.js"></script>
+<script type="text/javascript" src="./lib/jquery-3.min.js"></script>
+<script type="text/javascript" src="./lib/filesaver.min.js"></script>
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+<script type="text/javascript"> 
+
+    var myAppModule = (function () {
+        var outObj = {};
+
+        var file, fileReader, img;
+        var cCanvas, cImg;
+
+        var init = function (newFile, newFileReader) {
+            file = newFile;
+            fileReader = newFileReader;
+        };
+
+        var onloadImage = function () {
+            cCanvas = new fabric.Canvas('myCanvas');
+            cCanvas.setWidth(img.width);
+            cCanvas.setHeight(img.height);
+
+            cImg = new fabric.Image(img, {
+                left: 0,
+                top: 0,
+                angle: 0
+            });
+
+            cCanvas.add(cImg);
+        };
+
+        var onloadFile = function (e) {
+            img = new Image();
+            img.onload = onloadImage;
+            img.src = fileReader.result;
+        };
+
+        outObj.init = init;
+        outObj.OnloadFile = onloadFile;
+
+        return outObj;
+    })();
+
+    function handleFileSelect(evt) {
+        var files = evt.target.files;
+        var output = [];
+        for (var i = 0, f; f = files[i]; i++) {
+
+            if (!f.type.match('image.*')) {
+                continue;
+            }
+
+            var reader = new FileReader();
+
+            myAppModule.init(f, reader);
+
+            reader.onload = myAppModule.OnloadFile;
+
+            reader.readAsDataURL(f);
+
+        }
+    }
+
+    $(document).ready(function () {
+        document.getElementById('selectFile').addEventListener('change', handleFileSelect, false);
+
+    });
+
+</script>
+</head>
+<body>
+<canvas id="myCanvas">
+
+</canvas>
+
+<form id="form1">
+
+    <input type="file" id="selectFile" name="selectFile"/>
+
+</form>
+ <input type="button" id="image" value="Download Image">
+</body>
+<script>
+
+    $("input#image").click(function(){
+      console.log('image button clicked')
+      $("#myCanvas").get(0).toBlob(function(blob){
+        saveAs(blob, "myImg.png")
+      })
+    })
+    </script>
+</html>

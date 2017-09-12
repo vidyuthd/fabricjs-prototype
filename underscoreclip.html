@@ -1,0 +1,140 @@
+<html>
+<head>
+ <!--  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.4.0/fabric.min.js"></script> -->
+   <script type="text/javascript" src="./lib/fabric.js"></script>
+</head>
+<body>
+  <canvas id="c" width="400" height="400"></canvas>
+</body>
+<script type="text/javascript">
+ 
+ var img01URL = 'https://www.google.com/images/srpr/logo4w.png';
+ var img02URL = 'http://fabricjs.com/lib/pug.jpg';
+
+ var canvas = new fabric.Canvas('c');
+
+ // Note the use of the `originX` and `originY` properties, which we set
+ // to 'left' and 'top', respectively. This makes the math in the `clipTo`
+ // functions a little bit more straight-forward.
+ var clipRect1 = new fabric.Rect({
+     originX: 'left',
+     originY: 'top',
+     left: 180,
+     top: 10,
+     width: 200,
+     height: 200,
+     fill: 'none',
+     stroke: 'black',
+     strokeWidth: 2,
+     selectable: false
+ });
+ // We give these `Rect` objects a name property so the `clipTo` functions can
+ // find the one by which they want to be clipped.
+ clipRect1.set({
+     clipFor: 'pug'
+ });
+ canvas.add(clipRect1);
+
+ var clipRect2 = new fabric.Rect({
+     originX: 'left',
+     originY: 'top',
+     left: 10,
+     top: 10,
+     width: 150,
+     height: 150,
+     fill: 'none',
+     stroke: 'black',
+     strokeWidth: 2,
+     selectable: false
+ });
+ // We give these `Rect` objects a name property so the `clipTo` functions can
+ // find the one by which they want to be clipped.
+ clipRect2.set({
+     clipFor: 'logo'
+ });
+ canvas.add(clipRect2);
+
+
+ // Since the `angle` property of the Image object is stored 
+ // in degrees, we'll use this to convert it to radians.
+ function degToRad(degrees) {
+     return degrees * (Math.PI / 180);
+ }
+
+ var clipByName = function (ctx) {
+  console.warn('hi')
+         var clipRect = this.clipName == 'pug' ? clipRect1 : clipRect2;
+         var scaleXTo1 = (1 / this.scaleX);
+         var scaleYTo1 = (1 / this.scaleY);
+         ctx.save();
+         ctx.translate(0,0);
+         
+         //logic for correct scaling
+         if (this.getFlipY() && !this.getFlipX()){
+           ctx.scale(scaleXTo1, -scaleYTo1);
+         } else if (this.getFlipX() && !this.getFlipY()){
+           ctx.scale(-scaleXTo1, scaleYTo1);
+         } else if (this.getFlipX() && this.getFlipY()){
+           ctx.scale(-scaleXTo1, -scaleYTo1);
+         } else {
+          ctx.scale(scaleXTo1, scaleYTo1);
+         }
+         //IMPORTANT!!! do rotation after scaling
+         ctx.rotate(degToRad(this.angle * -1));
+         ctx.beginPath();
+         ctx.fillStyle = 'yellow'
+         ctx.rect(
+             clipRect.left - this.left,
+             clipRect.top - this.top,
+             clipRect.width,
+             clipRect.height
+         );
+         ctx.closePath();
+         ctx.restore();
+     }
+
+ var pugImg = new Image();
+ pugImg.onload = function (img) {    
+     var pug = new fabric.Image(pugImg, {
+         angle: 45,
+         width: 500,
+         height: 500,
+         left: 230,
+         top: 170,
+         scaleX: 0.3,
+         scaleY: 0.3,
+         originX: 'center',
+         originY: 'center',
+         clipName: 'pug',
+         clipTo: function(ctx) { 
+             return clipByName.bind(pug)(ctx)
+         }
+     });
+     canvas.add(pug);
+ };
+ pugImg.src = img02URL;
+
+ var logoImg = new Image();
+ var logo = null;
+ logoImg.onload = function (img) {    
+     logo = new fabric.Image(logoImg, {
+         angle: 10,
+         width: 550,
+         height: 190,
+         left: 150,
+         top: 50,
+         scaleX: 0.25,
+         scaleY: 0.25,
+         originX: 'center',
+         originY: 'center',
+         clipName: 'logo',
+         clipTo: function(ctx) { 
+             return clipByName.bind(logo)(ctx)
+         }
+     });
+     canvas.add(logo);
+     console.log(logo);
+ };
+ logoImg.src = img01URL;
+</script>
+</html>

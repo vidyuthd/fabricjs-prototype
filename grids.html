@@ -1,0 +1,64 @@
+<html>
+<head>
+  <style type="text/css">
+  </style>
+  <script type="text/javascript" src="./lib/fabric.js"></script>
+  <script type="text/javascript" src="./lib/jquery-3.min.js"></script>
+  <script type="text/javascript" src="./lib/filesaver.min.js"></script>
+</head>
+<body>
+      <canvas id="c" width="300" height="500"></canvas>
+</body>
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+<script type="text/javascript">
+(function() {
+  var canvas = this.__canvas = new fabric.Canvas('c');
+  // canvas.setBackgroundImage('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504065786/iphone-5_yjpaox.png', canvas.renderAll.bind(canvas))
+  fabric.Object.prototype.transparentCorners = false;
+
+  var rect1 = new fabric.Rect({
+      originX: 'left',
+      originY: 'top',
+      left: 10,
+      top: 25,
+      width: 280,
+      height: 225,
+      fill: 'transparent',
+      stroke: 'black',
+      strokeWidth: 2,
+      selectable: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockMovementX: true,
+      lockMovementY: true
+  });
+
+  canvas.add(rect1)
+
+  var rect2 = new fabric.Rect({
+      originX: 'left',
+      originY: 'top',
+      left: 10,
+      top: rect1.height+25,
+      width: 280,
+      height: 225,
+      fill: 'transparent',
+      stroke: 'black',
+      strokeWidth: 2,
+      selectable: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockMovementX: true,
+      lockMovementY: true
+  });
+  canvas.add(rect2)
+
+
+  canvas.setBackgroundImage('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504175209/iphone-5-5s-slim_ibqczy.webp', canvas.renderAll.bind(canvas))
+
+ 
+})();
+</script>

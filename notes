@@ -1,0 +1,29 @@
+For Custom Designer Cases 
+
+TODOs
+
+need layouts and templates, -> how to describe them (these are starting templates). Templates with rules ??
+
+
+add/edit text, color properties to text
+add/edit photo
+add/edit photo filter
+stickers
+cloudinary images
+
+
+Undo and redo
+
+Validations
+
+Ask for confirmation on reload of screen
+Make sure that stuff created on canvas is in proper bounds and widths 
+
+TODONTs
+
+
+Things to consider for time frame making
+
+1. how much time initial skeleton takes
+2. do we need any modeling in backend if so, what is it and how much time will that take
+3. do we need react to manage the frontend space and if so how much time will that add

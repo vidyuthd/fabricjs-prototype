@@ -1,0 +1,518 @@
+<html>
+<head>
+  <style type="text/css">
+  </style>
+  <script type="text/javascript" src="./lib/fabric.js"></script>
+  <script type="text/javascript" src="./lib/jquery-3.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
+</head>
+<body>
+  <canvas id="c" width="300" height="600"></canvas>
+  <button id="addRect">Add Rectangle</button>
+  <input type="file" id="selectFile" name="selectFile"/>
+  <input type="file" id="fitImage" name="fitImage"/>
+  <input type="file" id="backgroundImage" name="backgroundImage"/>
+  <button id="undo">Undo</button>
+  <button id="redo">Redo</button>
+  <button id="serialize">Serialize</button>
+</body>
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+ var canvas,
+            canvasOriginalWidth = 300,
+            canvasOriginalHeight = 600,
+            canvasWidth = 300,
+            canvasHeight = 600,
+            imgWidth,
+            imgHeight,
+            bgImage, outlineImg,phoneMask,
+            referenceTop, referenceLeft,
+            canvasScale = 1,
+            photoUrlPortrait = 'http://res.cloudinary.com/dwo2xbukk/image/upload/v1504865178/6s_outer_line_os1eu1.png';
+
+  var undoStack = [], redoStack = []     
+
+  var
+    canvasState             =  [],
+    currentStateIndex       = -1,
+    undoStatus              = false,
+    redoStatus              = false,
+    undoFinishedStatus      = 1,
+    redoFinishedStatus      = 1,
+    undoButton              = document.getElementById('undo'),
+    redoButton              = document.getElementById('redo');
+
+  $(document).ready(function () {
+             canvas = window._canvas = new fabric.Canvas('c',  {preserveObjectStacking: true});
+             setCanvasZoom();
+
+             fabric.Object.prototype.toObject = (function (toObject) {
+                 return function () {
+                     return fabric.util.object.extend(toObject.call(this), {
+                         textID: this.name
+                     });
+                 };
+             })(fabric.Object.prototype.toObject);
+
+             $('#addRect').click(function(){
+              var rect1 = new fabric.Rect({
+                  originX: 'left',
+                  originY: 'top',
+                  left: 10,
+                  top: 25,
+                  width: 280,
+                  height: 225,
+                  fill: 'transparent',
+                  stroke: 'black',
+                  strokeWidth: 2,
+                  selectable: true,
+                  clipFor: 0,
+                  name: 'rect'
+              });
+
+              canvas.add(rect1)
+             })
+
+             $('#serialize').on('click', function(){
+              var canvas_json = canvas.toJSON()
+              var template  = {
+                name: "new",
+                polygons: [
+                  {
+                    left: 0,
+                    top: 0,
+                    width: 1000,
+                    height: 2000,
+                    color: 'pink'
+                  }
+                ],
+                images: []
+              }
+
+              var rects = canvas_json.objects.filter(function(element){
+                  return element.type === 'rect'
+              })
+              rects.forEach(function(rect){
+                template.polygons.push({
+                  left: rect.left,
+                  top: rect.top,
+                  width: rect.width * rect.scaleX,
+                  height: rect.height * rect.scaleY,
+                  color: 'pink'
+                })
+              })
+
+              var images = canvas_json.objects.filter(function(element){
+                  return element.type === 'image'
+              })
+              images.forEach(function(image){
+                template.images.push(image)
+              })
+
+              console.log(template)
+              console.log(canvas.toJSON)
+             })
+
+             setCanvasSize({ height: canvasHeight, width: canvasWidth });
+
+             // setTimeout(function () {
+             //     setCanvasBackgroundImageUrl(photoUrlPortrait, 0, 0, 1)
+             // }, 50)
+
+             //add phone outline , currently of iphone 6s
+             fabric.Image.fromURL('http://res.cloudinary.com/dwo2xbukk/image/upload/v1504865178/6s_outer_line_os1eu1.png', function(oImg){
+              oImg.set({
+                name: 'phoneOutline',
+                selectable: false,
+                lockScalingX: true,
+                lockScalingY: true,
+                lockMovementX: true,
+                lockMovementY: true,
+              })
+              canvas.add(oImg)
+              referenceLeft = oImg.left
+              referenceTop = oImg.top
+              outlineImg = oImg
+
+              // set phone mask which includes camera and buttons
+              fabric.Image.fromURL('./images/iphone-6s.png', function(maskImg){
+               maskImg.set({
+                                         left: outlineImg.left,
+                                         top: outlineImg.top ,
+                                         originX: 'left',
+                                         originY: 'top',
+                                         clipFor: 'phoneMask',
+                                         scaleX: calculateScale(canvasWidth, canvasHeight, maskImg.width, maskImg.height),
+                                         scaleY: calculateScale(canvasWidth, canvasHeight, maskImg.width, maskImg.height),
+                                         selectable: false,
+                                         lockScalingX: true,
+                                         lockScalingY: true,
+                                         lockMovementX: true,
+                                         lockMovementY: true,
+                                         name: 'phoneMask'
+                                     })
+               phoneMask = oImg
+               canvas.setOverlayImage(maskImg, canvas.renderAll.bind(canvas))
+              })
+             })
+             
+             // canvas.on('object:added', function(){
+             //  var objects = this._objects
+             
+             //  var newObjects = objects.slice().sort(function(item1, item2){
+             //    if(item1.clipFor === 'phoneMask'){
+             //      return 1
+             //    } else { 
+             //      0
+             //    }
+             //  })
+
+             //    objects.forEach(function (obj) {
+             //      if(obj){
+             //        canvas.remove(obj);
+             //      }
+             //  })
+
+             //  newObjects.forEach(function(object){
+             //    canvas.add(object)
+             //  })
+             // })
+           
+
+             canvas.on('mouse:down', function(options){
+                getMouse(options);// its not an event its options of your canvas object
+             });
+
+
+             function getMouse(options) {
+           //      console.log(options);// you can check all options here
+           //      console.log(options.e.clientX);
+             }
+             
+             canvas.on("object:added", function (e) {
+                updateCanvasState()
+             });
+
+             canvas.on("object:modified", function (e) {
+                 updateCanvasState()
+             });
+
+             $('#undo').on('click', function(){
+                undo()
+             })
+
+             $('#redo').on('click', function(){
+                redo()
+             })
+
+         });
+
+        function updateCanvasState(){
+          if((undoStatus == false && redoStatus == false)){
+            var jsonData        = canvas.toJSON();
+            var canvasAsJson        = JSON.stringify(jsonData);
+            if(currentStateIndex < canvasState.length-1){
+              var indexToBeInserted                  = currentStateIndex+1;
+              canvasState[indexToBeInserted] = canvasAsJson;
+              var numberOfElementsToRetain           = indexToBeInserted+1;
+              canvasState                    = canvasState.splice(0,numberOfElementsToRetain);
+            }else{
+              canvasState.push(canvasAsJson);
+            }
+            currentStateIndex = canvasState.length-1;
+            if((currentStateIndex == canvasState.length-1) && currentStateIndex != -1){
+              redoButton.disabled= "disabled";
+            }
+          }
+        }
+
+         function undo(){
+          if(undoFinishedStatus){
+            if(currentStateIndex == -1){
+              undoStatus = false;
+            }
+            else{
+              if (canvasState.length >= 1) {
+                undoFinishedStatus = 0;
+                if(currentStateIndex != 0){
+                  undoStatus = true;
+                  canvas.loadFromJSON(canvasState[currentStateIndex-1],function(){
+                      var jsonData = JSON.parse(canvasState[currentStateIndex-1]);
+                      canvas.renderAll();
+                      undoStatus = false;
+                      currentStateIndex -= 1;
+                      undoButton.removeAttribute("disabled");
+                      if(currentStateIndex !== canvasState.length-1){
+                        redoButton.removeAttribute('disabled');
+                      }
+                    undoFinishedStatus = 1;
+                  });
+                }
+                else if(currentStateIndex == 0){
+                  canvas.clear();
+                  setCanvasBackgroundImageUrl(photoUrlPortrait, 0, 0, 1)
+                  undoFinishedStatus = 1;
+                  undoButton.disabled= "disabled";
+                  redoButton.removeAttribute('disabled');
+                  currentStateIndex -= 1;
+                }
+              }
+            }
+          }
+         }
+
+         function redo(){
+          if(redoFinishedStatus){
+            if((currentStateIndex == canvasState.length-1) && currentStateIndex != -1){
+              redoButton.disabled= "disabled";
+            }else{
+              if (canvasState.length > currentStateIndex && canvasState.length != 0){
+                redoFinishedStatus = 0;
+                redoStatus = true;
+                canvas.loadFromJSON(canvasState[currentStateIndex+1],function(){
+                    var jsonData = JSON.parse(canvasState[currentStateIndex+1]);
+                    canvas.renderAll();
+                    redoStatus = false;
+                    currentStateIndex += 1;
+                    if(currentStateIndex != -1){
+                      undoButton.removeAttribute('disabled');
+                    }
+                  redoFinishedStatus = 1;
+                  if((currentStateIndex == canvasState.length-1) && currentStateIndex != -1){
+                    redoButton.disabled= "disabled";
+                  }
+                });
+              }
+            }
+          }
+         }
+
+         function setCanvasSize(canvasSizeObject) {
+             canvas.setWidth(canvasSizeObject.width);
+             canvas.setHeight(canvasSizeObject.height);
+         }
+
+         function setCanvasZoom() {
+             canvasWidth = canvasOriginalWidth * canvasScale;
+             canvasHeight = canvasOriginalHeight * canvasScale;
+
+             canvas.setWidth(canvasWidth);
+             canvas.setHeight(canvasHeight);
+         }
+
+         function setCanvasBackgroundImageUrl(url, img) {
+             if (url && url.length > 0) {
+                 fabric.Image.fromURL(url, function (img) {
+                     bgImage = img;
+                     bgImage.crossOrigin = "anonymous";
+                     scaleAndPositionImage();
+                 }, { crossOrigin: 'Anonymous' });
+             } else {
+                 canvas.backgroundImage = 0;
+                 bgImage = img;
+                 scaleAndPositionImage();
+                 // canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+
+                 // canvas.renderAll();
+             }
+         }
+
+         function calculateScale(destinationWidth, destinationHeight, sourceWidth, sourceHeight){
+          var left, top, scaleFactor, th, tw, scale;
+
+           if(destinationWidth < destinationHeight) {
+                 //destination is portrait
+            // if(bgImage.width < bgImage.height) {
+               //source is also portrait or landscape
+               th = destinationHeight
+               tw = (sourceWidth * destinationHeight) / sourceHeight
+               scale = tw / sourceWidth
+             // } 
+             // } else {
+             //    //source is landascape
+             //    th = (bgImage.height * canvasWidth) / bgImage.width
+             //    tw = canvasWidth
+             //    scale =  th / bgImage.height                 
+             // }
+           } else {
+             //destination is landscape
+               th = (sourceHeight * destinationWidth) / sourceHeight
+               tw = destinationWidth
+               scale =  th / sourceHeight
+           }
+
+           return scale
+         }
+
+
+         function scaleAndPositionImage() {
+             setCanvasZoom();            
+
+             scale = calculateScale(canvasWidth, canvasHeight, bgImage.width, bgImage.height)
+
+             canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas), {
+                 top: referenceTop+outlineImg.height/2,
+                 left: referenceLeft+outlineImg.width/2,
+                 originX: 'top',
+                 originY: 'left',
+                 scaleX: scale,
+                 scaleY: scale,
+             });
+             canvas.renderAll();
+           }
+
+             function findByClipName(name) {
+                   return _.filter(canvas.getObjects(), function(item) {
+                     return item.clipFor === name
+                   })[0]
+               }
+
+               function degToRad(degrees) {
+                   return degrees * (Math.PI / 180);
+               }
+
+               var clipByName = function (ctx) {
+                   var clipRect = findByClipName(this.clipName);
+                   var scaleXTo1 = (1 / this.scaleX);
+                   var scaleYTo1 = (1 / this.scaleY);
+                   ctx.save();
+                   ctx.translate(0,0);
+                   
+                   //logic for correct scaling
+                   if (this.getFlipY() && !this.getFlipX()){
+                     ctx.scale(scaleXTo1, -scaleYTo1);
+                   } else if (this.getFlipX() && !this.getFlipY()){
+                     ctx.scale(-scaleXTo1, scaleYTo1);
+                   } else if (this.getFlipX() && this.getFlipY()){
+                     ctx.scale(-scaleXTo1, -scaleYTo1);
+                   } else {
+                     ctx.scale(scaleXTo1, scaleYTo1);
+                   }
+                   //IMPORTANT!!! do rotation after scaling
+                   ctx.rotate(degToRad(this.angle * -1));
+                   ctx.beginPath();
+                   ctx.rect(
+                       clipRect.left - this.left,
+                       clipRect.top - this.top,
+                       clipRect.width*clipRect.scaleX,
+                       clipRect.height*clipRect.scaleY
+                   );
+                   ctx.closePath();
+                   ctx.restore();
+               }
+
+             var myAppModule = (function () {
+                 var outObj = {};
+
+                 var file, fileReader, img, id;
+                 var cCanvas, cImg;
+
+                 var init = function (newFile, newFileReader, id) {
+                     file = newFile;
+                     fileReader = newFileReader;
+                 };
+
+                 var onloadImage = function (id) {
+                  var image = null
+
+                    if(id === 'fitImage'){
+                      image = new fabric.Image(img, {
+              left: canvas.getActiveObject().left + canvas.getActiveObject().width*canvas.getActiveObject().scaleX / 2,
+              top: canvas.getActiveObject().top + canvas.getActiveObject().height*canvas.getActiveObject().scaleY / 2,
+              scaleX: calculateScale(canvas.getActiveObject().width * canvas.getActiveObject().scaleX, canvas.getActiveObject().height * canvas.getActiveObject().scaleY, img.width, img.height),
+              scaleY: calculateScale(canvas.getActiveObject().width * canvas.getActiveObject().scaleX, canvas.getActiveObject().height * canvas.getActiveObject().scaleY, img.width, img.height),
+              originX: 'center',
+              originY: 'center',
+              clipName: canvas.getActiveObject().get('clipFor') ,
+              centeredScaling: true,
+              lockUniScaling: true,
+              clipTo: function(ctx) { 
+                  return _.bind(clipByName, image)(ctx) 
+              }        
+          });
+                      canvas.add(image);
+                      canvas.sendToBack(image)
+
+                    } else if (id === 'backgroundImage'){
+                      image  =  new fabric.Image(img, {
+                          left: 0,
+                          top: 0,
+                          name: 'backgroundImage'
+                      });
+                      setCanvasBackgroundImageUrl(null, image)
+                    }
+                     else {
+
+                      image  =  new fabric.Image(img, {
+                          left: outlineImg.left,
+                          top: outlineImg.top ,
+                          originX: 'left',
+                          originY: 'top',
+                          scaleX: calculateScale(canvasWidth, canvasHeight, img.width, img.height),
+                          scaleY: calculateScale(canvasWidth, canvasHeight, img.width, img.height),
+                          name: 'mask'
+                      });
+                      canvas.remove(phoneMask)
+                      canvas.add(image);
+                      canvas.add(phoneMask)
+                      // canvas.sendBackwards(image)
+                    }
+                     
+                 };
+
+                 var onloadFile = function (e) {
+                     img = new Image();
+                     img.onload = onloadImage.bind(this, fileReader.onloadend());
+                     img.src = fileReader.result;
+                 };
+
+                 outObj.init = init;
+                 outObj.OnloadFile = onloadFile;
+
+                 return outObj;
+             })();
+
+             function handleFileSelect(evt, id) {
+                 var files = evt.target.files;
+                 var output = [];
+                 for (var i = 0, f; f = files[i]; i++) {
+
+                     if (!f.type.match('image.*')) {
+                         continue;
+                     }
+
+                     var reader = new FileReader();
+
+                     myAppModule.init(f, reader);
+
+                     reader.onload = myAppModule.OnloadFile;
+                     reader.onloadend = function(){
+                      return id
+                     }
+
+                     reader.readAsDataURL(f);
+
+                 }
+             }
+
+              document.getElementById('selectFile').addEventListener('change', handleFileSelect, false);
+
+              document.getElementById('fitImage').addEventListener('change', function customFn(event){
+                handleFileSelect(event, 'fitImage')
+              }, false);
+
+
+              document.getElementById('backgroundImage').addEventListener('change', function customFn(event){
+                handleFileSelect(event, 'backgroundImage')
+              }, false);
+
+
+window.onbeforeunload = function() {
+  return "Data will be lost if you leave the page, are you sure?";
+};
+</script>
+</html>
